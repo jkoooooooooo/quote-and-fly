@@ -21,9 +21,20 @@ const FlightSearchForm = ({ onSearch }: FlightSearchFormProps) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchParams.fromCity && searchParams.toCity && searchParams.departureDate) {
-      onSearch(searchParams);
+    console.log('Search form submitted with params:', searchParams);
+    
+    if (!searchParams.fromCity || !searchParams.toCity || !searchParams.departureDate) {
+      console.log('Missing required fields:', {
+        fromCity: !searchParams.fromCity,
+        toCity: !searchParams.toCity,
+        departureDate: !searchParams.departureDate
+      });
+      alert('Please fill in all required fields: From City, To City, and Departure Date');
+      return;
     }
+    
+    console.log('Calling onSearch with valid params');
+    onSearch(searchParams);
   };
 
   const handleSwapCities = () => {
