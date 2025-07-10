@@ -1,8 +1,9 @@
-import { Clock, Users, Plane } from 'lucide-react';
+import { Clock, Users, Plane, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Flight } from '@/types/flight';
+import { useNavigate } from 'react-router-dom';
 
 interface FlightCardProps {
   flight: Flight;
@@ -10,6 +11,7 @@ interface FlightCardProps {
 }
 
 const FlightCard = ({ flight, onBook }: FlightCardProps) => {
+  const navigate = useNavigate();
   const formatTime = (dateTime: string) => {
     return new Date(dateTime).toLocaleTimeString('en-US', {
       hour: '2-digit',
@@ -94,8 +96,17 @@ const FlightCard = ({ flight, onBook }: FlightCardProps) => {
             </div>
           </div>
 
-          {/* Book Button */}
-          <div className="md:ml-6">
+          {/* Action Buttons */}
+          <div className="md:ml-6 flex flex-col gap-2">
+            <Button 
+              onClick={() => navigate(`/flight/${flight.id}`)}
+              variant="outline"
+              size="lg"
+              className="w-full md:w-auto"
+            >
+              <Eye className="h-4 w-4 mr-2" />
+              View Details
+            </Button>
             <Button 
               onClick={() => onBook(flight)}
               size="lg"
