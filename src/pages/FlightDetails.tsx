@@ -1,36 +1,78 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Plane, Clock, Users, MapPin, Calendar, Shield, Wifi, Coffee, Luggage } from 'lucide-react';
+import { ArrowLeft, Plane, Clock, Users, MapPin, Calendar, Shield, Wifi, Coffee, Luggage, AlertCircle } from 'lucide-react';
 import Header from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Flight } from '@/types/flight';
-import { mockFlights } from '@/data/mockData';
+import { FlightService } from '@/services/flightService';
+import { useToast } from '@/hooks/use-toast';
 
 const FlightDetails = () => {
   const { flightId } = useParams();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [flight, setFlight] = useState<Flight | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const foundFlight = mockFlights.find(f => f.id === flightId);
-    if (foundFlight) {
-      setFlight(foundFlight);
-    } else {
-      navigate('/');
-    }
-  }, [flightId, navigate]);
+    const fetchFlight = async () => {
+      if (!flightId) {
+        navigate('/');
+        return;
+      }
 
-  if (!flight) {
+      try {
+        setLoading(true);
+        setError(null);
+        const flightData = await FlightService.getFlightById(flightId);
+        
+        if (flightData) {
+          setFlight(flightData);
+        } else {
+          setError('Flight not found');
+        }
+      } catch (err) {
+        console.error('Failed to fetch flight:', err);
+        setError('Failed to load flight details. Please try again.');
+        toast({
+          title: "Error",
+          description: "Failed to load flight details. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFlight();
+  }, [flightId, navigate, toast]);
+
+  if (loading) {
     return (
       <div className="min-h-screen bg-gradient-secondary">
         <Header />
         <div className="container mx-auto px-4 py-8">
           <div className="text-center">
-            <Plane className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-            <h2 className="text-2xl font-semibold mb-2">Flight not found</h2>
+            <Plane className="h-16 w-16 text-muted-foreground mx-auto mb-4 animate-pulse" />
+            <h2 className="text-2xl font-semibold mb-2">Loading flight details...</h2>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !flight) {
+    return (
+      <div className="min-h-screen bg-gradient-secondary">
+        <Header />
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center">
+            <AlertCircle className="h-16 w-16 text-destructive mx-auto mb-4" />
+            <h2 className="text-2xl font-semibold mb-2">{error || 'Flight not found'}</h2>
             <Link to="/" className="text-primary hover:underline">
               Return to search
             </Link>
