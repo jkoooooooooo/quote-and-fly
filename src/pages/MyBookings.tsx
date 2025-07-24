@@ -1,72 +1,25 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Clock, User, Plane, MapPin, Search } from 'lucide-react';
+import { Calendar, Clock, User, Plane, MapPin } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import Header from '@/components/layout/Header';
 import { Booking } from '@/types/flight';
-import { SupabaseAdapter } from '@/services/supabaseAdapter';
-import { useToast } from '@/hooks/use-toast';
+import { mockFlights } from '@/data/mockData';
 
 const MyBookings = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [hasSearched, setHasSearched] = useState(false);
-  const { toast } = useToast();
-
-  const searchBookings = async (searchEmail?: string) => {
-    const emailToSearch = searchEmail || email;
-    if (!emailToSearch.trim()) {
-      toast({
-        title: "Email required",
-        description: "Please enter your email address to search for bookings.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const userBookings = await SupabaseAdapter.getBookingsByEmail(emailToSearch.trim());
-      setBookings(userBookings);
-      setHasSearched(true);
-      
-      if (userBookings.length === 0) {
-        toast({
-          title: "No bookings found",
-          description: "No bookings found for this email address.",
-        });
-      } else {
-        toast({
-          title: "Bookings found",
-          description: `Found ${userBookings.length} booking${userBookings.length > 1 ? 's' : ''} for ${emailToSearch}`,
-        });
-      }
-    } catch (error: any) {
-      console.error('Error fetching bookings:', error);
-      toast({
-        title: "Search failed",
-        description: "Unable to search for bookings. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
-    // Try to get email from recent booking or localStorage
-    const recentEmail = localStorage.getItem('userEmail');
-    if (recentEmail) {
-      setEmail(recentEmail);
-      searchBookings(recentEmail);
+    const storedBookings = localStorage.getItem('bookings');
+    if (storedBookings) {
+      setBookings(JSON.parse(storedBookings));
     }
   }, []);
 
-  // Flight details are now included in the booking data from Supabase
+  const getFlightDetails = (flightId: string) => {
+    return mockFlights.find(flight => flight.id === flightId);
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -93,70 +46,17 @@ const MyBookings = () => {
     }
   };
 
-  const cancelBooking = async (bookingId: string) => {
-    try {
-      await SupabaseAdapter.cancelBooking(bookingId);
-      const updatedBookings = bookings.map(booking =>
-        booking.id === bookingId
-          ? { ...booking, status: 'cancelled' as const }
-          : booking
-      );
-      setBookings(updatedBookings);
-      toast({
-        title: "Booking cancelled",
-        description: "Your booking has been successfully cancelled.",
-      });
-    } catch (error: any) {
-      console.error('Error cancelling booking:', error);
-      toast({
-        title: "Cancellation failed",
-        description: "Unable to cancel booking. Please try again.",
-        variant: "destructive",
-      });
-    }
+  const cancelBooking = (bookingId: string) => {
+    const updatedBookings = bookings.map(booking =>
+      booking.id === bookingId
+        ? { ...booking, status: 'cancelled' as const }
+        : booking
+    );
+    setBookings(updatedBookings);
+    localStorage.setItem('bookings', JSON.stringify(updatedBookings));
   };
 
-  if (!hasSearched) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background to-secondary/20">
-        <Header />
-        <div className="container mx-auto px-4 py-8">
-          <div className="max-w-md mx-auto">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Search className="h-5 w-5" />
-                  Find Your Bookings
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="email">Email Address</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter your email address"
-                    onKeyDown={(e) => e.key === 'Enter' && searchBookings()}
-                  />
-                </div>
-                <Button 
-                  onClick={() => searchBookings()} 
-                  disabled={loading}
-                  className="w-full"
-                >
-                  {loading ? 'Searching...' : 'Search Bookings'}
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (bookings.length === 0 && hasSearched) {
+  if (bookings.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background to-secondary/20">
         <Header />
@@ -165,19 +65,11 @@ const MyBookings = () => {
             <Plane className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
             <h2 className="text-2xl font-semibold mb-2">No Bookings Found</h2>
             <p className="text-muted-foreground mb-6">
-              No bookings found for {email}.
+              You haven't made any flight bookings yet.
             </p>
-            <div className="space-y-2">
-              <Button 
-                variant="outline" 
-                onClick={() => { setHasSearched(false); setEmail(''); }}
-              >
-                Search Again
-              </Button>
-              <Button asChild className="bg-gradient-primary hover:opacity-90">
-                <a href="/">Search Flights</a>
-              </Button>
-            </div>
+            <Button asChild className="bg-gradient-primary hover:opacity-90">
+              <a href="/">Search Flights</a>
+            </Button>
           </div>
         </div>
       </div>
@@ -199,19 +91,17 @@ const MyBookings = () => {
 
         <div className="space-y-6">
           {bookings.map((booking) => {
-            // Note: booking may include flight details from Supabase join query
-            const flightData = (booking as any).flights;
-            
+            const flight = getFlightDetails(booking.flightId);
+            if (!flight) return null;
+
             return (
               <Card key={booking.id} className="bg-gradient-card shadow-flight hover:shadow-xl transition-all duration-300">
                 <CardHeader className="pb-4">
                   <div className="flex items-center justify-between">
                     <CardTitle className="flex items-center space-x-3">
                       <Plane className="h-6 w-6 text-primary" />
-                      <span>{flightData?.flight_number || booking.flightId}</span>
-                      {flightData?.airline && (
-                        <Badge variant="secondary">{flightData.airline}</Badge>
-                      )}
+                      <span>{flight.flightNumber}</span>
+                      <Badge variant="secondary">{flight.airline}</Badge>
                     </CardTitle>
                     <Badge variant={getStatusVariant(booking.status)}>
                       {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
@@ -221,48 +111,41 @@ const MyBookings = () => {
 
                 <CardContent className="space-y-6">
                   {/* Flight Route */}
-                  {flightData ? (
-                    <div className="grid grid-cols-3 gap-4 items-center">
-                      <div className="text-center">
-                        <div className="text-2xl font-bold">{formatTime(flightData.departure_time)}</div>
-                        <div className="flex items-center justify-center space-x-1 text-sm font-medium">
-                          <MapPin className="h-3 w-3" />
-                          <span>{flightData.from_city}</span>
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {formatDate(flightData.departure_time)}
-                        </div>
+                  <div className="grid grid-cols-3 gap-4 items-center">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold">{formatTime(flight.departureTime)}</div>
+                      <div className="flex items-center justify-center space-x-1 text-sm font-medium">
+                        <MapPin className="h-3 w-3" />
+                        <span>{flight.fromCity}</span>
                       </div>
-
-                      <div className="text-center relative">
-                        <div className="flex items-center justify-center mb-2">
-                          <div className="flex-1 h-0.5 bg-primary/30"></div>
-                          <Plane className="h-4 w-4 text-primary mx-2" />
-                          <div className="flex-1 h-0.5 bg-primary/30"></div>
-                        </div>
-                        <div className="text-sm font-medium flex items-center justify-center">
-                          <Clock className="h-3 w-3 mr-1" />
-                          Flight
-                        </div>
-                      </div>
-
-                      <div className="text-center">
-                        <div className="text-2xl font-bold">{formatTime(flightData.arrival_time)}</div>
-                        <div className="flex items-center justify-center space-x-1 text-sm font-medium">
-                          <MapPin className="h-3 w-3" />
-                          <span>{flightData.to_city}</span>
-                      </div>
-                        <div className="text-xs text-muted-foreground">
-                          {formatDate(flightData.arrival_time)}
-                        </div>
+                      <div className="text-xs text-muted-foreground">
+                        {formatDate(flight.departureTime)}
                       </div>
                     </div>
-                  ) : (
-                    <div className="text-center py-4 text-muted-foreground">
-                      <p>Flight details not available</p>
-                      <p className="text-sm">Flight ID: {booking.flightId}</p>
+
+                    <div className="text-center relative">
+                      <div className="flex items-center justify-center mb-2">
+                        <div className="flex-1 h-0.5 bg-primary/30"></div>
+                        <Plane className="h-4 w-4 text-primary mx-2" />
+                        <div className="flex-1 h-0.5 bg-primary/30"></div>
+                      </div>
+                      <div className="text-sm font-medium flex items-center justify-center">
+                        <Clock className="h-3 w-3 mr-1" />
+                        {flight.duration}
+                      </div>
                     </div>
-                  )}
+
+                    <div className="text-center">
+                      <div className="text-2xl font-bold">{formatTime(flight.arrivalTime)}</div>
+                      <div className="flex items-center justify-center space-x-1 text-sm font-medium">
+                        <MapPin className="h-3 w-3" />
+                        <span>{flight.toCity}</span>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {formatDate(flight.arrivalTime)}
+                      </div>
+                    </div>
+                  </div>
 
                   {/* Booking Details */}
                   <div className="border-t pt-4">
@@ -279,11 +162,9 @@ const MyBookings = () => {
                           <span className="font-medium">Booked:</span> {formatDate(booking.bookingDate)}
                         </span>
                       </div>
-                      {flightData?.price && (
-                        <div className="flex items-center space-x-2">
-                          <span className="text-lg font-bold text-primary">${flightData.price}</span>
-                        </div>
-                      )}
+                      <div className="flex items-center space-x-2">
+                        <span className="text-lg font-bold text-primary">${flight.price}</span>
+                      </div>
                     </div>
                   </div>
 

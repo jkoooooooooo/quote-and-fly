@@ -4,58 +4,30 @@ import Header from '@/components/layout/Header';
 import FlightSearchForm from '@/components/flight/FlightSearchForm';
 import FlightCard from '@/components/flight/FlightCard';
 import { SearchParams, Flight } from '@/types/flight';
-import { SupabaseAdapter } from '@/services/supabaseAdapter';
-import { useToast } from '@/hooks/use-toast';
+import { mockFlights } from '@/data/mockData';
 import { Plane, MapPin } from 'lucide-react';
 
 const SearchFlights = () => {
   const [searchResults, setSearchResults] = useState<Flight[]>([]);
   const [searchParams, setSearchParams] = useState<SearchParams | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { toast } = useToast();
 
   const handleSearch = async (params: SearchParams) => {
     setIsLoading(true);
     setSearchParams(params);
-    setError(null);
     
-    try {
-      // Search flights using Supabase
-      const results = await SupabaseAdapter.searchFlights({
-        fromCity: params.fromCity,
-        toCity: params.toCity,
-        departureDate: params.departureDate,
-        passengers: params.passengers
-      });
+    // Simulate API call delay
+    setTimeout(() => {
+      // Filter flights based on search criteria
+      const results = mockFlights.filter(flight => 
+        flight.fromCity.toLowerCase().includes(params.fromCity.toLowerCase()) &&
+        flight.toCity.toLowerCase().includes(params.toCity.toLowerCase())
+      );
       
       setSearchResults(results);
-      
-      if (results.length === 0) {
-        toast({
-          title: "No flights found",
-          description: `No flights available from ${params.fromCity} to ${params.toCity} on ${new Date(params.departureDate).toLocaleDateString()}`,
-          variant: "default",
-        });
-      } else {
-        toast({
-          title: "Search completed",
-          description: `Found ${results.length} flight${results.length > 1 ? 's' : ''} matching your criteria`,
-        });
-      }
-    } catch (err: any) {
-      console.error('Flight search error:', err);
-      setError(err.message || 'Failed to search flights');
-      setSearchResults([]);
-      toast({
-        title: "Search failed",
-        description: "Unable to search flights. Please check your connection and try again.",
-        variant: "destructive",
-      });
-    } finally {
       setIsLoading(false);
-    }
+    }, 800);
   };
 
   const handleBookFlight = (flight: Flight) => {
@@ -139,18 +111,6 @@ const SearchFlights = () => {
                       onBook={handleBookFlight}
                     />
                   ))}
-                </div>
-              ) : error ? (
-                <div className="text-center py-12">
-                  <Plane className="h-16 w-16 text-red-500 mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold mb-2 text-red-600">Search Error</h3>
-                  <p className="text-muted-foreground mb-4">{error}</p>
-                  <button 
-                    onClick={() => searchParams && handleSearch(searchParams)}
-                    className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
-                  >
-                    Try Again
-                  </button>
                 </div>
               ) : searchParams ? (
                 <div className="text-center py-12">

@@ -8,7 +8,6 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Flight, Booking } from '@/types/flight';
 import { motivationalQuotes } from '@/data/mockData';
-import { SupabaseAdapter } from '@/services/supabaseAdapter';
 import { useToast } from '@/hooks/use-toast';
 
 const BookFlight = () => {
@@ -37,42 +36,38 @@ const BookFlight = () => {
 
     setIsBooking(true);
 
-    try {
-      // Create booking using Supabase
-      const newBooking = await SupabaseAdapter.createBooking({
+    // Simulate booking process
+    setTimeout(() => {
+      const newBooking: Booking = {
+        id: `BK${Date.now()}`,
         flightId: flight.id,
         passengerName,
-        email
-      });
+        email,
+        bookingDate: new Date().toISOString(),
+        status: 'confirmed'
+      };
 
+      // Save booking to localStorage (simulate database)
+      const existingBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
+      existingBookings.push(newBooking);
+      localStorage.setItem('bookings', JSON.stringify(existingBookings));
+
+      // Update flight seats
+      const updatedFlight = { ...flight, seatsAvailable: flight.seatsAvailable - 1 };
+      
       // Get random motivational quote
       const randomQuote = motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)];
       
       setBooking(newBooking);
       setQuote(randomQuote);
       setShowConfirmation(true);
+      setIsBooking(false);
 
       toast({
         title: "Booking Confirmed!",
         description: "Your flight has been successfully booked.",
       });
-
-      // Store email for easy access in MyBookings
-      localStorage.setItem('userEmail', email);
-
-      // Update the flight object to reflect the reduced seats
-      setFlight(prev => prev ? { ...prev, seatsAvailable: prev.seatsAvailable - 1 } : null);
-
-    } catch (error: any) {
-      console.error('Booking error:', error);
-      toast({
-        title: "Booking Failed",
-        description: error.message || "Unable to complete your booking. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsBooking(false);
-    }
+    }, 2000);
   };
 
   if (!flight) {
