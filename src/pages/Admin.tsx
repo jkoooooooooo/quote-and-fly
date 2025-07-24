@@ -3,15 +3,22 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import Header from "@/components/layout/Header";
+import { FlightForm } from "@/components/flight/FlightForm";
 import { FlightService } from "@/services/flightService";
 import { Flight } from "@/types/flight";
 import { useToast } from "@/hooks/use-toast";
-import { Plane, Users, Calendar, DollarSign, Edit, Trash2 } from "lucide-react";
+import { Plane, Users, Calendar, DollarSign, Edit, Trash2, Plus } from "lucide-react";
 
 const Admin = () => {
   const [flights, setFlights] = useState<Flight[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editingFlight, setEditingFlight] = useState<Flight | null>(null);
+  const [deletingFlight, setDeletingFlight] = useState<Flight | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -32,6 +39,81 @@ const Admin = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleAddFlight = () => {
+    setEditingFlight(null);
+    setShowForm(true);
+  };
+
+  const handleEditFlight = (flight: Flight) => {
+    setEditingFlight(flight);
+    setShowForm(true);
+  };
+
+  const handleDeleteFlight = (flight: Flight) => {
+    setDeletingFlight(flight);
+  };
+
+  const confirmDeleteFlight = async () => {
+    if (!deletingFlight) return;
+
+    try {
+      setIsSubmitting(true);
+      await FlightService.deleteFlight(deletingFlight.id);
+      setFlights(prev => prev.filter(f => f.id !== deletingFlight.id));
+      toast({
+        title: "Success",
+        description: "Flight deleted successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete flight",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+      setDeletingFlight(null);
+    }
+  };
+
+  const handleSubmitFlight = async (flightData: Omit<Flight, 'id'>) => {
+    try {
+      setIsSubmitting(true);
+      
+      if (editingFlight) {
+        const updatedFlight = await FlightService.updateFlight(editingFlight.id, flightData);
+        setFlights(prev => prev.map(f => f.id === editingFlight.id ? updatedFlight : f));
+        toast({
+          title: "Success",
+          description: "Flight updated successfully",
+        });
+      } else {
+        const newFlight = await FlightService.createFlight(flightData);
+        setFlights(prev => [...prev, newFlight]);
+        toast({
+          title: "Success",
+          description: "Flight added successfully",
+        });
+      }
+      
+      setShowForm(false);
+      setEditingFlight(null);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: `Failed to ${editingFlight ? 'update' : 'add'} flight`,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCancelForm = () => {
+    setShowForm(false);
+    setEditingFlight(null);
   };
 
   const formatTime = (dateTime: string) => {
@@ -119,7 +201,10 @@ const Admin = () => {
           <TabsContent value="flights" className="space-y-4">
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-bold">Flight Management</h2>
-              <Button>Add New Flight</Button>
+              <Button onClick={handleAddFlight}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add New Flight
+              </Button>
             </div>
 
             {loading ? (
@@ -167,10 +252,10 @@ const Admin = () => {
                         </div>
 
                         <div className="flex gap-2 ml-4">
-                          <Button variant="outline" size="sm">
+                          <Button variant="outline" size="sm" onClick={() => handleEditFlight(flight)}>
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="outline" size="sm">
+                          <Button variant="outline" size="sm" onClick={() => handleDeleteFlight(flight)}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
@@ -226,6 +311,39 @@ const Admin = () => {
             </div>
           </TabsContent>
         </Tabs>
+
+        {/* Flight Form Dialog */}
+        <Dialog open={showForm} onOpenChange={setShowForm}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{editingFlight ? 'Edit Flight' : 'Add New Flight'}</DialogTitle>
+            </DialogHeader>
+            <FlightForm
+              flight={editingFlight || undefined}
+              onSubmit={handleSubmitFlight}
+              onCancel={handleCancelForm}
+              isSubmitting={isSubmitting}
+            />
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={!!deletingFlight} onOpenChange={() => setDeletingFlight(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Flight</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete flight {deletingFlight?.flightNumber}? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDeleteFlight} disabled={isSubmitting}>
+                {isSubmitting ? 'Deleting...' : 'Delete'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );

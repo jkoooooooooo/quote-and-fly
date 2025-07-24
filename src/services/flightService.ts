@@ -76,4 +76,59 @@ export class FlightService {
       throw error;
     }
   }
+
+  static async createFlight(flightData: Omit<Flight, 'id'>): Promise<Flight> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/flights`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(flightData),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to create flight: ${response.statusText}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Error creating flight:', error);
+      throw error;
+    }
+  }
+
+  static async updateFlight(flightId: string, flightData: Partial<Flight>): Promise<Flight> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/flights/${flightId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(flightData),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to update flight: ${response.statusText}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Error updating flight:', error);
+      throw error;
+    }
+  }
+
+  static async deleteFlight(flightId: string): Promise<void> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/flights/${flightId}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to delete flight: ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error('Error deleting flight:', error);
+      throw error;
+    }
+  }
 }
