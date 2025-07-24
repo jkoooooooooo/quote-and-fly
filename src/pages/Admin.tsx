@@ -7,28 +7,42 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import Header from "@/components/layout/Header";
 import { FlightForm } from "@/components/flight/FlightForm";
-import { FlightService } from "@/services/flightService";
-import { Flight } from "@/types/flight";
+import { SupabaseAdapter } from "@/services/supabaseAdapter";
+import { Flight, Booking } from "@/types/flight";
 import { useToast } from "@/hooks/use-toast";
 import { Plane, Users, Calendar, DollarSign, Edit, Trash2, Plus } from "lucide-react";
+import { SupabaseConnectionTest } from "@/components/SupabaseConnectionTest";
 
 const Admin = () => {
   const [flights, setFlights] = useState<Flight[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
+  const [bookingsLoading, setBookingsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingFlight, setEditingFlight] = useState<Flight | null>(null);
   const [deletingFlight, setDeletingFlight] = useState<Flight | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [stats, setStats] = useState({
+    totalFlights: 0,
+    totalSeats: 0,
+    availableSeats: 0,
+    bookedSeats: 0,
+    totalRevenue: 0,
+    occupancyRate: 0,
+    averagePrice: 0
+  });
   const { toast } = useToast();
 
   useEffect(() => {
     loadFlights();
+    loadBookings();
+    loadStats();
   }, []);
 
   const loadFlights = async () => {
     try {
       setLoading(true);
-      const flightsData = await FlightService.getAllFlights();
+      const flightsData = await SupabaseAdapter.getAllFlights();
       setFlights(flightsData);
     } catch (error) {
       toast({
@@ -38,6 +52,31 @@ const Admin = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadBookings = async () => {
+    try {
+      setBookingsLoading(true);
+      const bookingsData = await SupabaseAdapter.getAllBookings();
+      setBookings(bookingsData);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load bookings",
+        variant: "destructive",
+      });
+    } finally {
+      setBookingsLoading(false);
+    }
+  };
+
+  const loadStats = async () => {
+    try {
+      const statsData = await SupabaseAdapter.getFlightStats();
+      setStats(statsData);
+    } catch (error) {
+      console.error('Failed to load stats:', error);
     }
   };
 
@@ -60,8 +99,9 @@ const Admin = () => {
 
     try {
       setIsSubmitting(true);
-      await FlightService.deleteFlight(deletingFlight.id);
+      await SupabaseAdapter.deleteFlight(deletingFlight.id);
       setFlights(prev => prev.filter(f => f.id !== deletingFlight.id));
+      loadStats(); // Refresh stats
       toast({
         title: "Success",
         description: "Flight deleted successfully",
@@ -83,14 +123,14 @@ const Admin = () => {
       setIsSubmitting(true);
       
       if (editingFlight) {
-        const updatedFlight = await FlightService.updateFlight(editingFlight.id, flightData);
+        const updatedFlight = await SupabaseAdapter.updateFlight(editingFlight.id, flightData);
         setFlights(prev => prev.map(f => f.id === editingFlight.id ? updatedFlight : f));
         toast({
           title: "Success",
           description: "Flight updated successfully",
         });
       } else {
-        const newFlight = await FlightService.createFlight(flightData);
+        const newFlight = await SupabaseAdapter.createFlight(flightData);
         setFlights(prev => [...prev, newFlight]);
         toast({
           title: "Success",
@@ -98,6 +138,7 @@ const Admin = () => {
         });
       }
       
+      loadStats(); // Refresh stats
       setShowForm(false);
       setEditingFlight(null);
     } catch (error) {
@@ -131,12 +172,24 @@ const Admin = () => {
     });
   };
 
-  const totalFlights = flights.length;
-  const totalSeats = flights.reduce((sum, flight) => sum + flight.totalSeats, 0);
-  const availableSeats = flights.reduce((sum, flight) => sum + flight.seatsAvailable, 0);
-  const totalRevenue = flights.reduce((sum, flight) => 
-    sum + (flight.totalSeats - flight.seatsAvailable) * flight.price, 0
-  );
+  const handleUpdateBookingStatus = async (bookingId: string, newStatus: string) => {
+    try {
+      await SupabaseAdapter.updateBookingStatus(bookingId, newStatus);
+      setBookings(prev => prev.map(b => 
+        b.id === bookingId ? { ...b, status: newStatus as 'confirmed' | 'pending' | 'cancelled' } : b
+      ));
+      toast({
+        title: "Success",
+        description: "Booking status updated successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update booking status",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -155,7 +208,7 @@ const Admin = () => {
               <Plane className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{totalFlights}</div>
+              <div className="text-2xl font-bold">{stats.totalFlights}</div>
             </CardContent>
           </Card>
 
@@ -165,8 +218,8 @@ const Admin = () => {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{availableSeats}</div>
-              <p className="text-xs text-muted-foreground">of {totalSeats} total</p>
+              <div className="text-2xl font-bold">{stats.availableSeats}</div>
+              <p className="text-xs text-muted-foreground">of {stats.totalSeats} total</p>
             </CardContent>
           </Card>
 
@@ -176,7 +229,7 @@ const Admin = () => {
               <Calendar className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{totalSeats - availableSeats}</div>
+              <div className="text-2xl font-bold">{stats.bookedSeats}</div>
             </CardContent>
           </Card>
 
@@ -186,9 +239,14 @@ const Admin = () => {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">${totalRevenue.toLocaleString()}</div>
+              <div className="text-2xl font-bold">${stats.totalRevenue.toLocaleString()}</div>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Connection Status */}
+        <div className="mb-6">
+          <SupabaseConnectionTest />
         </div>
 
         <Tabs defaultValue="flights" className="space-y-6">
@@ -268,14 +326,89 @@ const Admin = () => {
           </TabsContent>
 
           <TabsContent value="bookings" className="space-y-4">
-            <h2 className="text-2xl font-bold">Booking Management</h2>
-            <Card>
-              <CardContent className="p-6">
-                <div className="text-center py-8 text-muted-foreground">
-                  Booking management features will be available once connected to a database.
-                </div>
-              </CardContent>
-            </Card>
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold">Booking Management</h2>
+              <div className="text-sm text-muted-foreground">
+                {bookings.length} total bookings
+              </div>
+            </div>
+
+            {bookingsLoading ? (
+              <div className="text-center py-8">Loading bookings...</div>
+            ) : (
+              <div className="space-y-4">
+                {bookings.length === 0 ? (
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="text-center py-8 text-muted-foreground">
+                        No bookings found.
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  bookings.map((booking) => (
+                    <Card key={booking.id}>
+                      <CardContent className="p-6">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-4 mb-4">
+                              <div className="text-lg font-semibold">
+                                Booking #{booking.id.slice(-8)}
+                              </div>
+                              <Badge variant={
+                                booking.status === 'confirmed' ? 'default' :
+                                booking.status === 'pending' ? 'secondary' : 'destructive'
+                              }>
+                                {booking.status}
+                              </Badge>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+                              <div>
+                                <div className="font-medium">Passenger</div>
+                                <div className="text-muted-foreground">{booking.passengerName}</div>
+                                <div className="text-muted-foreground">{booking.email}</div>
+                              </div>
+                              <div>
+                                <div className="font-medium">Flight ID</div>
+                                <div className="text-muted-foreground">{booking.flightId}</div>
+                              </div>
+                              <div>
+                                <div className="font-medium">Booking Date</div>
+                                <div className="text-muted-foreground">
+                                  {new Date(booking.bookingDate).toLocaleDateString()}
+                                </div>
+                              </div>
+                              <div>
+                                <div className="font-medium">Status</div>
+                                <div className="flex gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleUpdateBookingStatus(booking.id, 'confirmed')}
+                                    disabled={booking.status === 'confirmed'}
+                                  >
+                                    Confirm
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleUpdateBookingStatus(booking.id, 'cancelled')}
+                                    disabled={booking.status === 'cancelled'}
+                                  >
+                                    Cancel
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="analytics" className="space-y-4">
@@ -287,10 +420,10 @@ const Admin = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="text-3xl font-bold">
-                    {totalSeats > 0 ? Math.round(((totalSeats - availableSeats) / totalSeats) * 100) : 0}%
+                    {Math.round(stats.occupancyRate)}%
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    {totalSeats - availableSeats} of {totalSeats} seats booked
+                    {stats.bookedSeats} of {stats.totalSeats} seats booked
                   </p>
                 </CardContent>
               </Card>
@@ -301,10 +434,10 @@ const Admin = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="text-3xl font-bold">
-                    ${flights.length > 0 ? Math.round(flights.reduce((sum, f) => sum + f.price, 0) / flights.length) : 0}
+                    ${Math.round(stats.averagePrice)}
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Across {flights.length} flights
+                    Across {stats.totalFlights} flights
                   </p>
                 </CardContent>
               </Card>

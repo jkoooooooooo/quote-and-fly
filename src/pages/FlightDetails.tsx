@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Flight } from '@/types/flight';
-import { FlightService } from '@/services/flightService';
+import { SupabaseAdapter } from '@/services/supabaseAdapter';
 import { useToast } from '@/hooks/use-toast';
 
 const FlightDetails = () => {
@@ -28,7 +28,7 @@ const FlightDetails = () => {
       try {
         setLoading(true);
         setError(null);
-        const flightData = await FlightService.getFlightById(flightId);
+        const flightData = await SupabaseAdapter.getFlightById(flightId);
         
         if (flightData) {
           setFlight(flightData);
