@@ -6,14 +6,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Flight, Booking } from '@/types/flight';
+import { Flight, Booking, SeatClass } from '@/types/flight';
 import { motivationalQuotes } from '@/data/mockData';
 import { useToast } from '@/hooks/use-toast';
+import SeatSelection from '@/components/flight/SeatSelection';
 
 const BookFlight = () => {
   const [flight, setFlight] = useState<Flight | null>(null);
   const [passengerName, setPassengerName] = useState('');
   const [email, setEmail] = useState('');
+  const [selectedSeatClass, setSelectedSeatClass] = useState<SeatClass | null>(null);
+  const [selectedPrice, setSelectedPrice] = useState<number>(0);
   const [isBooking, setIsBooking] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [booking, setBooking] = useState<Booking | null>(null);
@@ -30,9 +33,14 @@ const BookFlight = () => {
     }
   }, [navigate]);
 
+  const handleSeatClassSelect = (seatClass: SeatClass, price: number) => {
+    setSelectedSeatClass(seatClass);
+    setSelectedPrice(price);
+  };
+
   const handleBooking = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!flight || !passengerName || !email) return;
+    if (!flight || !passengerName || !email || !selectedSeatClass) return;
 
     setIsBooking(true);
 
@@ -44,7 +52,9 @@ const BookFlight = () => {
         passengerName,
         email,
         bookingDate: new Date().toISOString(),
-        status: 'confirmed'
+        status: 'confirmed',
+        seatClass: selectedSeatClass,
+        seatNumber: `${selectedSeatClass.toUpperCase()}${Math.floor(Math.random() * 50) + 1}${String.fromCharCode(65 + Math.floor(Math.random() * 6))}`
       };
 
       // Save booking to localStorage (simulate database)
@@ -52,8 +62,18 @@ const BookFlight = () => {
       existingBookings.push(newBooking);
       localStorage.setItem('bookings', JSON.stringify(existingBookings));
 
-      // Update flight seats
-      const updatedFlight = { ...flight, seatsAvailable: flight.seatsAvailable - 1 };
+      // Update flight seats - reduce available seats for the selected class
+      const updatedSeatAllocations = flight.seatAllocations?.map(allocation => 
+        allocation.class === selectedSeatClass 
+          ? { ...allocation, availableSeats: allocation.availableSeats - 1 }
+          : allocation
+      ) || [];
+      
+      const updatedFlight = { 
+        ...flight, 
+        seatsAvailable: flight.seatsAvailable - 1,
+        seatAllocations: updatedSeatAllocations
+      };
       
       // Get random motivational quote
       const randomQuote = motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)];
@@ -134,8 +154,16 @@ const BookFlight = () => {
                       </div>
                     </div>
                     <div>
+                      <span className="text-muted-foreground">Seat Class:</span>
+                      <div className="font-medium capitalize">{booking.seatClass} Class</div>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Seat Number:</span>
+                      <div className="font-medium">{booking.seatNumber}</div>
+                    </div>
+                    <div>
                       <span className="text-muted-foreground">Total Price:</span>
-                      <div className="font-medium text-lg text-primary">${flight.price}</div>
+                      <div className="font-medium text-lg text-primary">${selectedPrice}</div>
                     </div>
                   </div>
                 </div>
@@ -179,7 +207,7 @@ const BookFlight = () => {
             Back to Search
           </Button>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
             {/* Flight Summary */}
             <Card className="bg-gradient-card shadow-card">
               <CardHeader>
@@ -229,14 +257,29 @@ const BookFlight = () => {
                   </div>
                 </div>
 
-                <div className="border-t pt-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-lg font-medium">Total Price:</span>
-                    <span className="text-2xl font-bold text-primary">${flight.price}</span>
+                {selectedSeatClass && (
+                  <div className="border-t pt-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm text-muted-foreground">Selected Class:</span>
+                      <span className="font-medium capitalize">{selectedSeatClass} Class</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-lg font-medium">Total Price:</span>
+                      <span className="text-2xl font-bold text-primary">${selectedPrice}</span>
+                    </div>
                   </div>
-                </div>
+                )}
               </CardContent>
             </Card>
+
+            {/* Seat Selection */}
+            {flight.seatAllocations && flight.seatAllocations.length > 0 && (
+              <SeatSelection
+                seatAllocations={flight.seatAllocations}
+                selectedClass={selectedSeatClass}
+                onClassSelect={handleSeatClassSelect}
+              />
+            )}
 
             {/* Booking Form */}
             <Card className="bg-gradient-card shadow-card">
@@ -293,9 +336,14 @@ const BookFlight = () => {
                     type="submit" 
                     size="lg" 
                     className="w-full bg-gradient-primary hover:opacity-90 transition-opacity"
-                    disabled={isBooking || !passengerName || !email}
+                    disabled={isBooking || !passengerName || !email || !selectedSeatClass}
                   >
-                    {isBooking ? 'Processing Booking...' : `Book Flight - $${flight.price}`}
+                    {isBooking 
+                      ? 'Processing Booking...' 
+                      : selectedSeatClass 
+                        ? `Book Flight - $${selectedPrice}` 
+                        : 'Select Seat Class to Continue'
+                    }
                   </Button>
                 </form>
               </CardContent>

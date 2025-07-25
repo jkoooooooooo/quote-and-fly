@@ -12,7 +12,12 @@ export const mockFlights: Flight[] = [
     totalSeats: 180,
     price: 299,
     airline: 'American Airlines',
-    duration: '5h 30m'
+    duration: '5h 30m',
+    seatAllocations: [
+      { class: 'economy', totalSeats: 150, availableSeats: 35, price: 299 },
+      { class: 'business', totalSeats: 24, availableSeats: 8, price: 799 },
+      { class: 'first', totalSeats: 6, availableSeats: 2, price: 1499 }
+    ]
   },
   {
     id: '2',
@@ -25,7 +30,12 @@ export const mockFlights: Flight[] = [
     totalSeats: 160,
     price: 349,
     airline: 'United Airlines',
-    duration: '5h 45m'
+    duration: '5h 45m',
+    seatAllocations: [
+      { class: 'economy', totalSeats: 128, availableSeats: 15, price: 349 },
+      { class: 'business', totalSeats: 24, availableSeats: 6, price: 899 },
+      { class: 'first', totalSeats: 8, availableSeats: 2, price: 1699 }
+    ]
   },
   {
     id: '3',
@@ -38,7 +48,12 @@ export const mockFlights: Flight[] = [
     totalSeats: 200,
     price: 279,
     airline: 'Delta Airlines',
-    duration: '5h 40m'
+    duration: '5h 40m',
+    seatAllocations: [
+      { class: 'economy', totalSeats: 160, availableSeats: 52, price: 279 },
+      { class: 'business', totalSeats: 32, availableSeats: 12, price: 729 },
+      { class: 'first', totalSeats: 8, availableSeats: 3, price: 1399 }
+    ]
   },
   {
     id: '4',
@@ -51,7 +66,10 @@ export const mockFlights: Flight[] = [
     totalSeats: 150,
     price: 199,
     airline: 'Southwest Airlines',
-    duration: '3h 45m'
+    duration: '3h 45m',
+    seatAllocations: [
+      { class: 'economy', totalSeats: 150, availableSeats: 89, price: 199 }
+    ]
   },
   {
     id: '5',
@@ -64,7 +82,12 @@ export const mockFlights: Flight[] = [
     totalSeats: 140,
     price: 389,
     airline: 'JetBlue Airways',
-    duration: '6h 35m'
+    duration: '6h 35m',
+    seatAllocations: [
+      { class: 'economy', totalSeats: 110, availableSeats: 25, price: 389 },
+      { class: 'business', totalSeats: 20, availableSeats: 6, price: 889 },
+      { class: 'first', totalSeats: 10, availableSeats: 3, price: 1589 }
+    ]
   }
 ];
 

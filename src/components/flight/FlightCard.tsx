@@ -1,8 +1,8 @@
-import { Clock, Users, Plane, Eye } from 'lucide-react';
+import { Clock, Users, Plane, Eye, Crown, Briefcase } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Flight } from '@/types/flight';
+import { Flight, SeatClass } from '@/types/flight';
 import { useNavigate } from 'react-router-dom';
 
 interface FlightCardProps {
@@ -33,6 +33,24 @@ const FlightCard = ({ flight, onBook }: FlightCardProps) => {
     return 'destructive';
   };
 
+  const getSeatClassIcon = (seatClass: SeatClass) => {
+    switch (seatClass) {
+      case 'first':
+        return <Crown className="h-3 w-3" />;
+      case 'business':
+        return <Briefcase className="h-3 w-3" />;
+      case 'economy':
+        return <Users className="h-3 w-3" />;
+    }
+  };
+
+  const getLowestPrice = () => {
+    if (!flight.seatAllocations || flight.seatAllocations.length === 0) {
+      return flight.price;
+    }
+    return Math.min(...flight.seatAllocations.map(allocation => allocation.price));
+  };
+
   return (
     <Card className="bg-gradient-card shadow-flight hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
       <CardContent className="p-6">
@@ -48,7 +66,7 @@ const FlightCard = ({ flight, onBook }: FlightCardProps) => {
                 </Badge>
               </div>
               <div className="text-right">
-                <div className="text-2xl font-bold text-primary">${flight.price}</div>
+                <div className="text-2xl font-bold text-primary">from ${getLowestPrice()}</div>
                 <div className="text-sm text-muted-foreground">per person</div>
               </div>
             </div>
@@ -81,6 +99,29 @@ const FlightCard = ({ flight, onBook }: FlightCardProps) => {
                 <div className="text-xs text-muted-foreground">{formatDate(flight.arrivalTime)}</div>
               </div>
             </div>
+
+            {/* Seat Classes */}
+            {flight.seatAllocations && flight.seatAllocations.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-4">
+                {flight.seatAllocations
+                  .filter(allocation => allocation.totalSeats > 0)
+                  .map((allocation) => (
+                    <div key={allocation.class} className="flex items-center space-x-1 bg-accent/10 rounded-full px-3 py-1">
+                      {getSeatClassIcon(allocation.class)}
+                      <span className="text-xs font-medium capitalize">{allocation.class}</span>
+                      <span className="text-xs text-muted-foreground">
+                        ${allocation.price}
+                      </span>
+                      <Badge 
+                        variant={allocation.availableSeats > 0 ? "secondary" : "destructive"} 
+                        className="text-xs ml-1"
+                      >
+                        {allocation.availableSeats}
+                      </Badge>
+                    </div>
+                  ))}
+              </div>
+            )}
 
             {/* Availability */}
             <div className="flex items-center justify-between">
