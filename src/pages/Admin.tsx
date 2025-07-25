@@ -10,7 +10,7 @@ import { FlightForm } from "@/components/flight/FlightForm";
 import { FlightService } from "@/services/flightService";
 import { Flight } from "@/types/flight";
 import { useToast } from "@/hooks/use-toast";
-import { Plane, Users, Calendar, DollarSign, Edit, Trash2, Plus } from "lucide-react";
+import { Plane, Users, Calendar, DollarSign, Edit, Trash2, Plus, Eye } from "lucide-react";
 
 const Admin = () => {
   const [flights, setFlights] = useState<Flight[]>([]);
@@ -252,6 +252,11 @@ const Admin = () => {
                         </div>
 
                         <div className="flex gap-2 ml-4">
+                          <Button variant="outline" size="sm" asChild>
+                            <a href={`/flight/${flight.id}`}>
+                              <Eye className="h-4 w-4" />
+                            </a>
+                          </Button>
                           <Button variant="outline" size="sm" onClick={() => handleEditFlight(flight)}>
                             <Edit className="h-4 w-4" />
                           </Button>

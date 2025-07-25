@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Clock, User, Plane, MapPin } from 'lucide-react';
+import { Calendar, Clock, User, Plane, MapPin, Eye } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -169,8 +169,18 @@ const MyBookings = () => {
                   </div>
 
                   {/* Actions */}
-                  {booking.status === 'confirmed' && (
-                    <div className="border-t pt-4 flex justify-end">
+                  <div className="border-t pt-4 flex justify-between">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      asChild
+                    >
+                      <a href={`/flight/${flight.id}`}>
+                        <Eye className="h-4 w-4 mr-2" />
+                        View Details
+                      </a>
+                    </Button>
+                    {booking.status === 'confirmed' && (
                       <Button
                         variant="destructive"
                         size="sm"
@@ -178,8 +188,8 @@ const MyBookings = () => {
                       >
                         Cancel Booking
                       </Button>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             );
