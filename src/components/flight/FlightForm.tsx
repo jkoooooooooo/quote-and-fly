@@ -13,18 +13,20 @@ interface FlightFormProps {
 }
 
 export const FlightForm = ({ flight, onSubmit, onCancel, isSubmitting }: FlightFormProps) => {
-  const [formData, setFormData] = useState({
-    flightNumber: flight?.flightNumber || '',
-    fromCity: flight?.fromCity || '',
-    toCity: flight?.toCity || '',
-    departureTime: flight?.departureTime ? new Date(flight.departureTime).toISOString().slice(0, 16) : '',
-    arrivalTime: flight?.arrivalTime ? new Date(flight.arrivalTime).toISOString().slice(0, 16) : '',
-    seatsAvailable: flight?.seatsAvailable || 0,
-    totalSeats: flight?.totalSeats || 0,
-    price: flight?.price || 0,
-    airline: flight?.airline || '',
-    duration: flight?.duration || '',
-  });
+const [formData, setFormData] = useState({
+  flightNumber: flight?.flightNumber || '',
+  fromCity: flight?.fromCity || '',
+  toCity: flight?.toCity || '',
+  departureTime: flight?.departureTime ? new Date(flight.departureTime).toISOString().slice(0, 16) : '',
+  arrivalTime: flight?.arrivalTime ? new Date(flight.arrivalTime).toISOString().slice(0, 16) : '',
+  seatsAvailable: flight?.seatsAvailable || 0,
+  totalSeats: flight?.totalSeats || 0,
+  price: flight?.price || 0,
+  airline: flight?.airline || '',
+  duration: flight?.duration || '',
+  seatClass: flight?.seatClass || 'economy', // NEW
+});
+
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -159,6 +161,21 @@ export const FlightForm = ({ flight, onSubmit, onCancel, isSubmitting }: FlightF
               required
             />
           </div>
+          <div>
+  <Label htmlFor="seatClass">Seat Class</Label>
+  <select
+    id="seatClass"
+    className="mt-1 block w-full border border-gray-300 rounded px-3 py-2"
+    value={formData.seatClass}
+    onChange={(e) => handleChange('seatClass', e.target.value)}
+    required
+  >
+    <option value="economy">Economy</option>
+    <option value="business">Business</option>
+    <option value="first">First Class</option>
+  </select>
+</div>
+
 
           <div className="flex gap-3 pt-4">
             <Button type="submit" disabled={isSubmitting}>
