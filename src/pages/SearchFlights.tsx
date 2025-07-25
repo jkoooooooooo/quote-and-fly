@@ -1,33 +1,41 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/layout/Header';
 import FlightSearchForm from '@/components/flight/FlightSearchForm';
 import FlightCard from '@/components/flight/FlightCard';
-import { SearchParams, Flight } from '@/types/flight';
-import { mockFlights } from '@/data/mockData';
+import { SearchParams } from '@/types/flight';
+import { useSearchFlights, useFlights } from '@/hooks/useFlights';
+import { seedDatabase } from '@/scripts/seedDatabase';
 import { Plane, MapPin } from 'lucide-react';
+import type { Database } from '@/integrations/supabase/types';
+
+type Flight = Database['public']['Tables']['flights']['Row'];
 
 const SearchFlights = () => {
-  const [searchResults, setSearchResults] = useState<Flight[]>([]);
   const [searchParams, setSearchParams] = useState<SearchParams | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
+  // Seed database on component mount
+  useEffect(() => {
+    seedDatabase().catch(console.error);
+  }, []);
+
+  // Use real flights from Supabase
+  const { data: allFlights = [], isLoading: loadingAllFlights } = useFlights();
+  const { 
+    data: searchResults = [], 
+    isLoading: loadingSearch,
+    isError: searchError 
+  } = useSearchFlights(
+    searchParams ? {
+      fromCity: searchParams.fromCity,
+      toCity: searchParams.toCity,
+      departureDate: searchParams.departureDate,
+    } : {}
+  );
+
   const handleSearch = async (params: SearchParams) => {
-    setIsLoading(true);
     setSearchParams(params);
-    
-    // Simulate API call delay
-    setTimeout(() => {
-      // Filter flights based on search criteria
-      const results = mockFlights.filter(flight => 
-        flight.fromCity.toLowerCase().includes(params.fromCity.toLowerCase()) &&
-        flight.toCity.toLowerCase().includes(params.toCity.toLowerCase())
-      );
-      
-      setSearchResults(results);
-      setIsLoading(false);
-    }, 800);
   };
 
   const handleBookFlight = (flight: Flight) => {
@@ -35,6 +43,9 @@ const SearchFlights = () => {
     sessionStorage.setItem('selectedFlight', JSON.stringify(flight));
     navigate('/book');
   };
+
+  const isLoading = loadingAllFlights || loadingSearch;
+  const displayFlights = searchParams ? searchResults : allFlights;
 
   return (
     <div className="min-h-screen bg-gradient-secondary">
@@ -74,15 +85,18 @@ const SearchFlights = () => {
       </section>
 
       {/* Search Results */}
-      {(searchResults.length > 0 || isLoading) && (
+      {(displayFlights.length > 0 || isLoading || searchError) && (
         <section className="py-8">
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto">
-              {searchParams && (
-                <div className="mb-6">
-                  <h2 className="text-2xl font-bold mb-2">
-                    Flights from {searchParams.fromCity} to {searchParams.toCity}
-                  </h2>
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold mb-2">
+                  {searchParams 
+                    ? `Flights from ${searchParams.fromCity} to ${searchParams.toCity}`
+                    : `Available Flights`
+                  }
+                </h2>
+                {searchParams && (
                   <p className="text-muted-foreground">
                     {new Date(searchParams.departureDate).toLocaleDateString('en-US', {
                       weekday: 'long',
@@ -91,8 +105,8 @@ const SearchFlights = () => {
                       day: 'numeric'
                     })} • {searchParams.passengers} passenger{searchParams.passengers > 1 ? 's' : ''}
                   </p>
-                </div>
-              )}
+                )}
+              </div>
 
               {isLoading ? (
                 <div className="space-y-4">
@@ -102,9 +116,17 @@ const SearchFlights = () => {
                     </div>
                   ))}
                 </div>
-              ) : searchResults.length > 0 ? (
+              ) : searchError ? (
+                <div className="text-center py-12">
+                  <Plane className="h-16 w-16 text-destructive mx-auto mb-4" />
+                  <h3 className="text-xl font-semibold mb-2">Error loading flights</h3>
+                  <p className="text-muted-foreground">
+                    There was an error loading flights. Please try again later.
+                  </p>
+                </div>
+              ) : displayFlights.length > 0 ? (
                 <div className="space-y-4">
-                  {searchResults.map(flight => (
+                  {displayFlights.map(flight => (
                     <FlightCard
                       key={flight.id}
                       flight={flight}
@@ -112,15 +134,20 @@ const SearchFlights = () => {
                     />
                   ))}
                 </div>
-              ) : searchParams ? (
+              ) : (
                 <div className="text-center py-12">
                   <Plane className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold mb-2">No flights found</h3>
+                  <h3 className="text-xl font-semibold mb-2">
+                    {searchParams ? 'No flights found' : 'No flights available'}
+                  </h3>
                   <p className="text-muted-foreground">
-                    Try adjusting your search criteria or check other dates
+                    {searchParams 
+                      ? 'Try adjusting your search criteria or check other dates'
+                      : 'There are no flights available at the moment. Please check back later or contact an administrator to add flights.'
+                    }
                   </p>
                 </div>
-              ) : null}
+              )}
             </div>
           </div>
         </section>

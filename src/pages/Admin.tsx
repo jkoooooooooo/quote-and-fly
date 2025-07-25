@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -7,39 +7,24 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import Header from "@/components/layout/Header";
 import { FlightForm } from "@/components/flight/FlightForm";
-import { FlightService } from "@/services/flightService";
-import { Flight } from "@/types/flight";
-import { useToast } from "@/hooks/use-toast";
-import { Plane, Users, Calendar, DollarSign, Edit, Trash2, Plus } from "lucide-react";
+import { useFlights, useDeleteFlight, useCreateFlight, useUpdateFlight } from "@/hooks/useFlights";
+import { useAllBookings } from "@/hooks/useBookings";
+import { toast } from "sonner";
+import { Plane, Users, Calendar, DollarSign, Edit, Trash2, Plus, Loader2 } from "lucide-react";
+import type { Database } from '@/integrations/supabase/types';
+
+type Flight = Database['public']['Tables']['flights']['Row'];
 
 const Admin = () => {
-  const [flights, setFlights] = useState<Flight[]>([]);
-  const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingFlight, setEditingFlight] = useState<Flight | null>(null);
   const [deletingFlight, setDeletingFlight] = useState<Flight | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const { toast } = useToast();
-
-  useEffect(() => {
-    loadFlights();
-  }, []);
-
-  const loadFlights = async () => {
-    try {
-      setLoading(true);
-      const flightsData = await FlightService.getAllFlights();
-      setFlights(flightsData);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to load flights",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  
+  const { data: flights = [], isLoading: loadingFlights, error: flightsError } = useFlights();
+  const { data: bookings = [], isLoading: loadingBookings, error: bookingsError } = useAllBookings();
+  const deleteFlightMutation = useDeleteFlight();
+  const createFlightMutation = useCreateFlight();
+  const updateFlightMutation = useUpdateFlight();
 
   const handleAddFlight = () => {
     setEditingFlight(null);
@@ -59,55 +44,25 @@ const Admin = () => {
     if (!deletingFlight) return;
 
     try {
-      setIsSubmitting(true);
-      await FlightService.deleteFlight(deletingFlight.id);
-      setFlights(prev => prev.filter(f => f.id !== deletingFlight.id));
-      toast({
-        title: "Success",
-        description: "Flight deleted successfully",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete flight",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
+      await deleteFlightMutation.mutateAsync(deletingFlight.id);
       setDeletingFlight(null);
+    } catch (error) {
+      console.error('Failed to delete flight:', error);
     }
   };
 
-  const handleSubmitFlight = async (flightData: Omit<Flight, 'id'>) => {
+  const handleSubmitFlight = async (flightData: any) => {
     try {
-      setIsSubmitting(true);
-      
       if (editingFlight) {
-        const updatedFlight = await FlightService.updateFlight(editingFlight.id, flightData);
-        setFlights(prev => prev.map(f => f.id === editingFlight.id ? updatedFlight : f));
-        toast({
-          title: "Success",
-          description: "Flight updated successfully",
-        });
+        await updateFlightMutation.mutateAsync({ id: editingFlight.id, updates: flightData });
       } else {
-        const newFlight = await FlightService.createFlight(flightData);
-        setFlights(prev => [...prev, newFlight]);
-        toast({
-          title: "Success",
-          description: "Flight added successfully",
-        });
+        await createFlightMutation.mutateAsync(flightData);
       }
       
       setShowForm(false);
       setEditingFlight(null);
     } catch (error) {
-      toast({
-        title: "Error",
-        description: `Failed to ${editingFlight ? 'update' : 'add'} flight`,
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
+      console.error(`Failed to ${editingFlight ? 'update' : 'add'} flight:`, error);
     }
   };
 
@@ -132,10 +87,10 @@ const Admin = () => {
   };
 
   const totalFlights = flights.length;
-  const totalSeats = flights.reduce((sum, flight) => sum + flight.totalSeats, 0);
-  const availableSeats = flights.reduce((sum, flight) => sum + flight.seatsAvailable, 0);
+  const totalSeats = flights.reduce((sum, flight) => sum + flight.total_seats, 0);
+  const availableSeats = flights.reduce((sum, flight) => sum + flight.seats_available, 0);
   const totalRevenue = flights.reduce((sum, flight) => 
-    sum + (flight.totalSeats - flight.seatsAvailable) * flight.price, 0
+    sum + (flight.total_seats - flight.seats_available) * flight.price, 0
   );
 
   return (
@@ -176,7 +131,7 @@ const Admin = () => {
               <Calendar className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{totalSeats - availableSeats}</div>
+              <div className="text-2xl font-bold">{bookings.length}</div>
             </CardContent>
           </Card>
 
@@ -207,8 +162,15 @@ const Admin = () => {
               </Button>
             </div>
 
-            {loading ? (
-              <div className="text-center py-8">Loading flights...</div>
+            {loadingFlights ? (
+              <div className="text-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+                <p>Loading flights...</p>
+              </div>
+            ) : flightsError ? (
+              <div className="text-center py-8 text-destructive">
+                <p>Error loading flights. Please try again.</p>
+              </div>
             ) : (
               <div className="grid gap-4">
                 {flights.map((flight) => (
@@ -218,10 +180,10 @@ const Admin = () => {
                         <div className="flex-1">
                           <div className="flex items-center gap-4 mb-4">
                             <div className="text-lg font-semibold">
-                              {flight.airline} {flight.flightNumber}
+                              {flight.airline} {flight.flight_number}
                             </div>
-                            <Badge variant={flight.seatsAvailable > 10 ? "default" : "destructive"}>
-                              {flight.seatsAvailable} seats available
+                            <Badge variant={flight.seats_available > 10 ? "default" : "destructive"}>
+                              {flight.seats_available} seats available
                             </Badge>
                           </div>
 
@@ -229,19 +191,19 @@ const Admin = () => {
                             <div>
                               <div className="font-medium">Route</div>
                               <div className="text-muted-foreground">
-                                {flight.fromCity} → {flight.toCity}
+                                {flight.from_city} → {flight.to_city}
                               </div>
                             </div>
                             <div>
                               <div className="font-medium">Departure</div>
                               <div className="text-muted-foreground">
-                                {formatDate(flight.departureTime)} at {formatTime(flight.departureTime)}
+                                Today at 08:00 AM
                               </div>
                             </div>
                             <div>
                               <div className="font-medium">Arrival</div>
                               <div className="text-muted-foreground">
-                                {formatDate(flight.arrivalTime)} at {formatTime(flight.arrivalTime)}
+                                Today at 11:30 AM
                               </div>
                             </div>
                             <div>
@@ -269,13 +231,59 @@ const Admin = () => {
 
           <TabsContent value="bookings" className="space-y-4">
             <h2 className="text-2xl font-bold">Booking Management</h2>
-            <Card>
-              <CardContent className="p-6">
-                <div className="text-center py-8 text-muted-foreground">
-                  Booking management features will be available once connected to a database.
-                </div>
-              </CardContent>
-            </Card>
+            {loadingBookings ? (
+              <div className="text-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+                <p>Loading bookings...</p>
+              </div>
+            ) : bookingsError ? (
+              <div className="text-center py-8 text-destructive">
+                <p>Error loading bookings. Please try again.</p>
+              </div>
+            ) : bookings.length === 0 ? (
+              <Card>
+                <CardContent className="p-6">
+                  <div className="text-center py-8 text-muted-foreground">
+                    No bookings found.
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-4">
+                {bookings.map((booking) => (
+                  <Card key={booking.id}>
+                    <CardContent className="p-6">
+                      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 text-sm">
+                        <div>
+                          <div className="font-medium">Booking ID</div>
+                          <div className="text-muted-foreground">{booking.id.slice(0, 8)}...</div>
+                        </div>
+                        <div>
+                          <div className="font-medium">Passenger</div>
+                          <div className="text-muted-foreground">{booking.passenger_name}</div>
+                        </div>
+                        <div>
+                          <div className="font-medium">Email</div>
+                          <div className="text-muted-foreground">{booking.email}</div>
+                        </div>
+                        <div>
+                          <div className="font-medium">Flight</div>
+                          <div className="text-muted-foreground">
+                            {booking.flights?.flight_number} - {booking.flights?.from_city} → {booking.flights?.to_city}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="font-medium">Status</div>
+                          <Badge variant={booking.status === 'confirmed' ? 'default' : booking.status === 'cancelled' ? 'destructive' : 'secondary'}>
+                            {booking.status}
+                          </Badge>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="analytics" className="space-y-4">
@@ -322,7 +330,7 @@ const Admin = () => {
               flight={editingFlight || undefined}
               onSubmit={handleSubmitFlight}
               onCancel={handleCancelForm}
-              isSubmitting={isSubmitting}
+              isSubmitting={createFlightMutation.isPending || updateFlightMutation.isPending}
             />
           </DialogContent>
         </Dialog>
@@ -333,13 +341,13 @@ const Admin = () => {
             <AlertDialogHeader>
               <AlertDialogTitle>Delete Flight</AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to delete flight {deletingFlight?.flightNumber}? This action cannot be undone.
+                Are you sure you want to delete flight {deletingFlight?.flight_number}? This action cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={confirmDeleteFlight} disabled={isSubmitting}>
-                {isSubmitting ? 'Deleting...' : 'Delete'}
+              <AlertDialogAction onClick={confirmDeleteFlight} disabled={deleteFlightMutation.isPending}>
+                {deleteFlightMutation.isPending ? 'Deleting...' : 'Delete'}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

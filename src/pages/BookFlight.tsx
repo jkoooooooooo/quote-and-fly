@@ -6,20 +6,26 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Flight, Booking } from '@/types/flight';
 import { motivationalQuotes } from '@/data/mockData';
-import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import { useCreateBooking } from '@/hooks/useBookings';
+import { toast } from 'sonner';
+import type { Database } from '@/integrations/supabase/types';
+
+type Flight = Database['public']['Tables']['flights']['Row'];
+type Booking = Database['public']['Tables']['bookings']['Row'];
 
 const BookFlight = () => {
   const [flight, setFlight] = useState<Flight | null>(null);
   const [passengerName, setPassengerName] = useState('');
   const [email, setEmail] = useState('');
-  const [isBooking, setIsBooking] = useState(false);
+  const [passengers, setPassengers] = useState(1);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [booking, setBooking] = useState<Booking | null>(null);
   const [quote, setQuote] = useState('');
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const { user } = useAuth();
+  const createBookingMutation = useCreateBooking();
 
   useEffect(() => {
     const selectedFlight = sessionStorage.getItem('selectedFlight');
@@ -30,44 +36,33 @@ const BookFlight = () => {
     }
   }, [navigate]);
 
+  useEffect(() => {
+    if (user?.email) {
+      setEmail(user.email);
+    }
+  }, [user]);
+
   const handleBooking = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!flight || !passengerName || !email) return;
 
-    setIsBooking(true);
-
-    // Simulate booking process
-    setTimeout(() => {
-      const newBooking: Booking = {
-        id: `BK${Date.now()}`,
+    try {
+      const result = await createBookingMutation.mutateAsync({
         flightId: flight.id,
         passengerName,
         email,
-        bookingDate: new Date().toISOString(),
-        status: 'confirmed'
-      };
-
-      // Save booking to localStorage (simulate database)
-      const existingBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
-      existingBookings.push(newBooking);
-      localStorage.setItem('bookings', JSON.stringify(existingBookings));
-
-      // Update flight seats
-      const updatedFlight = { ...flight, seatsAvailable: flight.seatsAvailable - 1 };
-      
-      // Get random motivational quote
-      const randomQuote = motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)];
-      
-      setBooking(newBooking);
-      setQuote(randomQuote);
-      setShowConfirmation(true);
-      setIsBooking(false);
-
-      toast({
-        title: "Booking Confirmed!",
-        description: "Your flight has been successfully booked.",
+        passengers,
       });
-    }, 2000);
+
+      setBooking(result);
+      setQuote(motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)]);
+      setShowConfirmation(true);
+      
+      // Clear the stored flight selection
+      sessionStorage.removeItem('selectedFlight');
+    } catch (error) {
+      console.error('Booking failed:', error);
+    }
   };
 
   if (!flight) {
@@ -113,29 +108,25 @@ const BookFlight = () => {
                     </div>
                     <div>
                       <span className="text-muted-foreground">Flight:</span>
-                      <div className="font-medium">{flight.flightNumber}</div>
+                      <div className="font-medium">{flight.flight_number}</div>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Route:</span>
-                      <div className="font-medium">{flight.fromCity} → {flight.toCity}</div>
+                      <div className="font-medium">{flight.from_city} → {flight.to_city}</div>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Passenger:</span>
-                      <div className="font-medium">{booking.passengerName}</div>
+                      <div className="font-medium">{booking.passenger_name}</div>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Departure:</span>
                       <div className="font-medium">
-                        {new Date(flight.departureTime).toLocaleDateString()} at{' '}
-                        {new Date(flight.departureTime).toLocaleTimeString('en-US', {
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
+                        Today at 08:00 AM
                       </div>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Total Price:</span>
-                      <div className="font-medium text-lg text-primary">${flight.price}</div>
+                      <div className="font-medium text-lg text-primary">${flight.price * passengers}</div>
                     </div>
                   </div>
                 </div>
@@ -190,37 +181,29 @@ const BookFlight = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="text-center border-b pb-4">
-                  <h3 className="text-2xl font-bold">{flight.flightNumber}</h3>
+                  <h3 className="text-2xl font-bold">{flight.flight_number}</h3>
                   <p className="text-muted-foreground">{flight.airline}</p>
                 </div>
 
                 <div className="space-y-3">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">From:</span>
-                    <span className="font-medium">{flight.fromCity}</span>
+                    <span className="font-medium">{flight.from_city}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">To:</span>
-                    <span className="font-medium">{flight.toCity}</span>
+                    <span className="font-medium">{flight.to_city}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Departure:</span>
                     <span className="font-medium">
-                      {new Date(flight.departureTime).toLocaleDateString()} at{' '}
-                      {new Date(flight.departureTime).toLocaleTimeString('en-US', {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
+                      Today at 08:00 AM
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Arrival:</span>
                     <span className="font-medium">
-                      {new Date(flight.arrivalTime).toLocaleDateString()} at{' '}
-                      {new Date(flight.arrivalTime).toLocaleTimeString('en-US', {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
+                      Today at 11:30 AM
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -279,6 +262,19 @@ const BookFlight = () => {
                     </div>
                   </div>
 
+                  <div className="space-y-2">
+                    <Label htmlFor="passengers">Number of Passengers</Label>
+                    <Input
+                      id="passengers"
+                      type="number"
+                      min="1"
+                      max="9"
+                      value={passengers}
+                      onChange={(e) => setPassengers(parseInt(e.target.value) || 1)}
+                      required
+                    />
+                  </div>
+
                   <div className="bg-accent/10 rounded-lg p-4">
                     <div className="flex items-center space-x-2 mb-2">
                       <CreditCard className="h-4 w-4 text-accent-foreground" />
@@ -293,9 +289,9 @@ const BookFlight = () => {
                     type="submit" 
                     size="lg" 
                     className="w-full bg-gradient-primary hover:opacity-90 transition-opacity"
-                    disabled={isBooking || !passengerName || !email}
+                    disabled={createBookingMutation.isPending || !passengerName || !email}
                   >
-                    {isBooking ? 'Processing Booking...' : `Book Flight - $${flight.price}`}
+                    {createBookingMutation.isPending ? 'Processing Booking...' : `Book Flight - $${flight.price * passengers}`}
                   </Button>
                 </form>
               </CardContent>

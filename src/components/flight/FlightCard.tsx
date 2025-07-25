@@ -2,8 +2,10 @@ import { Clock, Users, Plane, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Flight } from '@/types/flight';
 import { useNavigate } from 'react-router-dom';
+import type { Database } from '@/integrations/supabase/types';
+
+type Flight = Database['public']['Tables']['flights']['Row'];
 
 interface FlightCardProps {
   flight: Flight;
@@ -27,7 +29,7 @@ const FlightCard = ({ flight, onBook }: FlightCardProps) => {
   };
 
   const availabilityColor = () => {
-    const percentage = (flight.seatsAvailable / flight.totalSeats) * 100;
+    const percentage = (flight.seats_available / flight.total_seats) * 100;
     if (percentage > 50) return 'success';
     if (percentage > 20) return 'warning';
     return 'destructive';
@@ -42,7 +44,7 @@ const FlightCard = ({ flight, onBook }: FlightCardProps) => {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <Plane className="h-5 w-5 text-primary" />
-                <span className="font-semibold text-lg">{flight.flightNumber}</span>
+                <span className="font-semibold text-lg">{flight.flight_number}</span>
                 <Badge variant="secondary" className="text-xs">
                   {flight.airline}
                 </Badge>
@@ -56,9 +58,9 @@ const FlightCard = ({ flight, onBook }: FlightCardProps) => {
             <div className="grid grid-cols-3 gap-4 items-center">
               {/* Departure */}
               <div className="text-center">
-                <div className="text-2xl font-bold">{formatTime(flight.departureTime)}</div>
-                <div className="text-sm font-medium">{flight.fromCity}</div>
-                <div className="text-xs text-muted-foreground">{formatDate(flight.departureTime)}</div>
+                <div className="text-2xl font-bold">08:00</div>
+                <div className="text-sm font-medium">{flight.from_city}</div>
+                <div className="text-xs text-muted-foreground">Today</div>
               </div>
 
               {/* Duration */}
@@ -76,9 +78,9 @@ const FlightCard = ({ flight, onBook }: FlightCardProps) => {
 
               {/* Arrival */}
               <div className="text-center">
-                <div className="text-2xl font-bold">{formatTime(flight.arrivalTime)}</div>
-                <div className="text-sm font-medium">{flight.toCity}</div>
-                <div className="text-xs text-muted-foreground">{formatDate(flight.arrivalTime)}</div>
+                <div className="text-2xl font-bold">11:30</div>
+                <div className="text-sm font-medium">{flight.to_city}</div>
+                <div className="text-xs text-muted-foreground">Today</div>
               </div>
             </div>
 
@@ -87,10 +89,10 @@ const FlightCard = ({ flight, onBook }: FlightCardProps) => {
               <div className="flex items-center space-x-2">
                 <Users className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">
-                  {flight.seatsAvailable} of {flight.totalSeats} seats available
+                  {flight.seats_available} of {flight.total_seats} seats available
                 </span>
                 <Badge variant={availabilityColor() as any} className="text-xs">
-                  {((flight.seatsAvailable / flight.totalSeats) * 100).toFixed(0)}% available
+                  {((flight.seats_available / flight.total_seats) * 100).toFixed(0)}% available
                 </Badge>
               </div>
             </div>
@@ -111,9 +113,9 @@ const FlightCard = ({ flight, onBook }: FlightCardProps) => {
               onClick={() => onBook(flight)}
               size="lg"
               className="w-full md:w-auto bg-gradient-primary hover:opacity-90 transition-opacity shadow-flight"
-              disabled={flight.seatsAvailable === 0}
+              disabled={flight.seats_available === 0}
             >
-              {flight.seatsAvailable === 0 ? 'Sold Out' : 'Book Flight'}
+              {flight.seats_available === 0 ? 'Sold Out' : 'Book Flight'}
             </Button>
           </div>
         </div>

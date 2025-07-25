@@ -1,25 +1,14 @@
-import { useState, useEffect } from 'react';
-import { Calendar, Clock, User, Plane, MapPin } from 'lucide-react';
+import { Calendar, Clock, User, Plane, MapPin, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Header from '@/components/layout/Header';
-import { Booking } from '@/types/flight';
-import { mockFlights } from '@/data/mockData';
+import { useUserBookings, useCancelBooking } from '@/hooks/useBookings';
+import { toast } from 'sonner';
 
 const MyBookings = () => {
-  const [bookings, setBookings] = useState<Booking[]>([]);
-
-  useEffect(() => {
-    const storedBookings = localStorage.getItem('bookings');
-    if (storedBookings) {
-      setBookings(JSON.parse(storedBookings));
-    }
-  }, []);
-
-  const getFlightDetails = (flightId: string) => {
-    return mockFlights.find(flight => flight.id === flightId);
-  };
+  const { data: bookings = [], isLoading, error, refetch } = useUserBookings();
+  const cancelBookingMutation = useCancelBooking();
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -46,15 +35,51 @@ const MyBookings = () => {
     }
   };
 
-  const cancelBooking = (bookingId: string) => {
-    const updatedBookings = bookings.map(booking =>
-      booking.id === bookingId
-        ? { ...booking, status: 'cancelled' as const }
-        : booking
-    );
-    setBookings(updatedBookings);
-    localStorage.setItem('bookings', JSON.stringify(updatedBookings));
+    const cancelBooking = async (bookingId: string) => {
+    try {
+      await cancelBookingMutation.mutateAsync(bookingId);
+      refetch();
+    } catch (error) {
+      console.error('Failed to cancel booking:', error);
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background to-secondary/20">
+        <Header />
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center py-16">
+            <Loader2 className="h-16 w-16 text-muted-foreground mx-auto mb-4 animate-spin" />
+            <h2 className="text-2xl font-semibold mb-2">Loading Your Bookings</h2>
+            <p className="text-muted-foreground">
+              Please wait while we fetch your flight reservations...
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background to-secondary/20">
+        <Header />
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center py-16">
+            <Plane className="h-16 w-16 text-destructive mx-auto mb-4" />
+            <h2 className="text-2xl font-semibold mb-2">Error Loading Bookings</h2>
+            <p className="text-muted-foreground mb-6">
+              There was an error loading your bookings. Please try again.
+            </p>
+            <Button onClick={() => refetch()} className="bg-gradient-primary hover:opacity-90">
+              Try Again
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (bookings.length === 0) {
     return (
@@ -91,7 +116,7 @@ const MyBookings = () => {
 
         <div className="space-y-6">
           {bookings.map((booking) => {
-            const flight = getFlightDetails(booking.flightId);
+            const flight = booking.flights;
             if (!flight) return null;
 
             return (
@@ -100,7 +125,7 @@ const MyBookings = () => {
                   <div className="flex items-center justify-between">
                     <CardTitle className="flex items-center space-x-3">
                       <Plane className="h-6 w-6 text-primary" />
-                      <span>{flight.flightNumber}</span>
+                      <span>{flight.flight_number}</span>
                       <Badge variant="secondary">{flight.airline}</Badge>
                     </CardTitle>
                     <Badge variant={getStatusVariant(booking.status)}>
@@ -113,13 +138,13 @@ const MyBookings = () => {
                   {/* Flight Route */}
                   <div className="grid grid-cols-3 gap-4 items-center">
                     <div className="text-center">
-                      <div className="text-2xl font-bold">{formatTime(flight.departureTime)}</div>
+                      <div className="text-2xl font-bold">08:00</div>
                       <div className="flex items-center justify-center space-x-1 text-sm font-medium">
                         <MapPin className="h-3 w-3" />
-                        <span>{flight.fromCity}</span>
+                        <span>{flight.from_city}</span>
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        {formatDate(flight.departureTime)}
+                        {formatDate(booking.booking_date)}
                       </div>
                     </div>
 
@@ -136,13 +161,13 @@ const MyBookings = () => {
                     </div>
 
                     <div className="text-center">
-                      <div className="text-2xl font-bold">{formatTime(flight.arrivalTime)}</div>
+                      <div className="text-2xl font-bold">11:30</div>
                       <div className="flex items-center justify-center space-x-1 text-sm font-medium">
                         <MapPin className="h-3 w-3" />
-                        <span>{flight.toCity}</span>
+                        <span>{flight.to_city}</span>
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        {formatDate(flight.arrivalTime)}
+                        {formatDate(booking.booking_date)}
                       </div>
                     </div>
                   </div>
@@ -153,13 +178,13 @@ const MyBookings = () => {
                       <div className="flex items-center space-x-2">
                         <User className="h-4 w-4 text-muted-foreground" />
                         <span className="text-sm">
-                          <span className="font-medium">Passenger:</span> {booking.passengerName}
+                          <span className="font-medium">Passenger:</span> {booking.passenger_name}
                         </span>
                       </div>
                       <div className="flex items-center space-x-2">
                         <Calendar className="h-4 w-4 text-muted-foreground" />
                         <span className="text-sm">
-                          <span className="font-medium">Booked:</span> {formatDate(booking.bookingDate)}
+                          <span className="font-medium">Booked:</span> {formatDate(booking.booking_date)}
                         </span>
                       </div>
                       <div className="flex items-center space-x-2">

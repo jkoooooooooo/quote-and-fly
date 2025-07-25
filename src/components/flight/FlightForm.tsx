@@ -3,24 +3,25 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Flight } from "@/types/flight";
+import type { Database } from '@/integrations/supabase/types';
+
+type Flight = Database['public']['Tables']['flights']['Row'];
+type FlightInsert = Database['public']['Tables']['flights']['Insert'];
 
 interface FlightFormProps {
   flight?: Flight;
-  onSubmit: (flightData: Omit<Flight, 'id'>) => void;
+  onSubmit: (flightData: FlightInsert) => void;
   onCancel: () => void;
   isSubmitting?: boolean;
 }
 
 export const FlightForm = ({ flight, onSubmit, onCancel, isSubmitting }: FlightFormProps) => {
   const [formData, setFormData] = useState({
-    flightNumber: flight?.flightNumber || '',
-    fromCity: flight?.fromCity || '',
-    toCity: flight?.toCity || '',
-    departureTime: flight?.departureTime ? new Date(flight.departureTime).toISOString().slice(0, 16) : '',
-    arrivalTime: flight?.arrivalTime ? new Date(flight.arrivalTime).toISOString().slice(0, 16) : '',
-    seatsAvailable: flight?.seatsAvailable || 0,
-    totalSeats: flight?.totalSeats || 0,
+    flight_number: flight?.flight_number || '',
+    from_city: flight?.from_city || '',
+    to_city: flight?.to_city || '',
+    seats_available: flight?.seats_available || 0,
+    total_seats: flight?.total_seats || 0,
     price: flight?.price || 0,
     airline: flight?.airline || '',
     duration: flight?.duration || '',
@@ -28,11 +29,7 @@ export const FlightForm = ({ flight, onSubmit, onCancel, isSubmitting }: FlightF
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit({
-      ...formData,
-      departureTime: new Date(formData.departureTime).toISOString(),
-      arrivalTime: new Date(formData.arrivalTime).toISOString(),
-    });
+    onSubmit(formData);
   };
 
   const handleChange = (field: string, value: string | number) => {
@@ -57,11 +54,11 @@ export const FlightForm = ({ flight, onSubmit, onCancel, isSubmitting }: FlightF
               />
             </div>
             <div>
-              <Label htmlFor="flightNumber">Flight Number</Label>
+              <Label htmlFor="flight_number">Flight Number</Label>
               <Input
-                id="flightNumber"
-                value={formData.flightNumber}
-                onChange={(e) => handleChange('flightNumber', e.target.value)}
+                id="flight_number"
+                value={formData.flight_number}
+                onChange={(e) => handleChange('flight_number', e.target.value)}
                 required
               />
             </div>
@@ -69,43 +66,20 @@ export const FlightForm = ({ flight, onSubmit, onCancel, isSubmitting }: FlightF
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="fromCity">From City</Label>
+              <Label htmlFor="from_city">From City</Label>
               <Input
-                id="fromCity"
-                value={formData.fromCity}
-                onChange={(e) => handleChange('fromCity', e.target.value)}
+                id="from_city"
+                value={formData.from_city}
+                onChange={(e) => handleChange('from_city', e.target.value)}
                 required
               />
             </div>
             <div>
-              <Label htmlFor="toCity">To City</Label>
+              <Label htmlFor="to_city">To City</Label>
               <Input
-                id="toCity"
-                value={formData.toCity}
-                onChange={(e) => handleChange('toCity', e.target.value)}
-                required
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="departureTime">Departure Time</Label>
-              <Input
-                id="departureTime"
-                type="datetime-local"
-                value={formData.departureTime}
-                onChange={(e) => handleChange('departureTime', e.target.value)}
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="arrivalTime">Arrival Time</Label>
-              <Input
-                id="arrivalTime"
-                type="datetime-local"
-                value={formData.arrivalTime}
-                onChange={(e) => handleChange('arrivalTime', e.target.value)}
+                id="to_city"
+                value={formData.to_city}
+                onChange={(e) => handleChange('to_city', e.target.value)}
                 required
               />
             </div>
@@ -113,25 +87,25 @@ export const FlightForm = ({ flight, onSubmit, onCancel, isSubmitting }: FlightF
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <Label htmlFor="totalSeats">Total Seats</Label>
+              <Label htmlFor="total_seats">Total Seats</Label>
               <Input
-                id="totalSeats"
+                id="total_seats"
                 type="number"
                 min="1"
-                value={formData.totalSeats}
-                onChange={(e) => handleChange('totalSeats', parseInt(e.target.value))}
+                value={formData.total_seats}
+                onChange={(e) => handleChange('total_seats', parseInt(e.target.value))}
                 required
               />
             </div>
             <div>
-              <Label htmlFor="seatsAvailable">Available Seats</Label>
+              <Label htmlFor="seats_available">Available Seats</Label>
               <Input
-                id="seatsAvailable"
+                id="seats_available"
                 type="number"
                 min="0"
-                max={formData.totalSeats}
-                value={formData.seatsAvailable}
-                onChange={(e) => handleChange('seatsAvailable', parseInt(e.target.value))}
+                max={formData.total_seats}
+                value={formData.seats_available}
+                onChange={(e) => handleChange('seats_available', parseInt(e.target.value))}
                 required
               />
             </div>
