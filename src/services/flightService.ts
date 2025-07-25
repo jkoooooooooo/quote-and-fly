@@ -1,18 +1,18 @@
 import { Flight } from '@/types/flight';
+import { mockFlights } from '@/data/mockData';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 export class FlightService {
   static async getFlightById(flightId: string): Promise<Flight | null> {
     try {
-      const response = await fetch(`${API_BASE_URL}/flights/${flightId}`);
-      if (!response.ok) {
-        if (response.status === 404) {
-          return null;
-        }
-        throw new Error(`Failed to fetch flight: ${response.statusText}`);
-      }
-      return await response.json();
+      // For demo purposes, use mock data instead of API call
+      const flight = mockFlights.find(f => f.id === flightId);
+      
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      return flight || null;
     } catch (error) {
       console.error('Error fetching flight:', error);
       throw error;
@@ -46,11 +46,9 @@ export class FlightService {
 
   static async getAllFlights(): Promise<Flight[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/flights`);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch flights: ${response.statusText}`);
-      }
-      return await response.json();
+      // For demo purposes, use mock data instead of API call
+      await new Promise(resolve => setTimeout(resolve, 500));
+      return [...mockFlights];
     } catch (error) {
       console.error('Error fetching flights:', error);
       throw error;

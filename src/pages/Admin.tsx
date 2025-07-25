@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -253,9 +254,9 @@ const Admin = () => {
 
                         <div className="flex gap-2 ml-4">
                           <Button variant="outline" size="sm" asChild>
-                            <a href={`/flight/${flight.id}`}>
+                            <Link to={`/flight/${flight.id}`}>
                               <Eye className="h-4 w-4" />
-                            </a>
+                            </Link>
                           </Button>
                           <Button variant="outline" size="sm" onClick={() => handleEditFlight(flight)}>
                             <Edit className="h-4 w-4" />

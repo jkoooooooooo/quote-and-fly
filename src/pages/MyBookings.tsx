@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Calendar, Clock, User, Plane, MapPin, Eye } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -68,7 +69,7 @@ const MyBookings = () => {
               You haven't made any flight bookings yet.
             </p>
             <Button asChild className="bg-gradient-primary hover:opacity-90">
-              <a href="/">Search Flights</a>
+              <Link to="/">Search Flights</Link>
             </Button>
           </div>
         </div>
@@ -175,10 +176,10 @@ const MyBookings = () => {
                       size="sm"
                       asChild
                     >
-                      <a href={`/flight/${flight.id}`}>
+                      <Link to={`/flight/${flight.id}`}>
                         <Eye className="h-4 w-4 mr-2" />
                         View Details
-                      </a>
+                      </Link>
                     </Button>
                     {booking.status === 'confirmed' && (
                       <Button
