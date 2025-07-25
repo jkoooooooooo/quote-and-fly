@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Flight } from "@/types/flight";
+import { Plus, Trash2 } from "lucide-react";
+import { Flight, SeatAllocation, SeatClass } from "@/types/flight";
 
 interface FlightFormProps {
   flight?: Flight;
@@ -26,17 +27,47 @@ export const FlightForm = ({ flight, onSubmit, onCancel, isSubmitting }: FlightF
     duration: flight?.duration || '',
   });
 
+  const [seatAllocations, setSeatAllocations] = useState<SeatAllocation[]>(
+    flight?.seatAllocations || [
+      { class: 'economy', totalSeats: 150, availableSeats: 150, price: 299 },
+      { class: 'business', totalSeats: 30, availableSeats: 30, price: 699 },
+      { class: 'first', totalSeats: 12, availableSeats: 12, price: 1299 }
+    ]
+  );
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Calculate total seats and available seats from allocations
+    const totalSeats = seatAllocations.reduce((sum, allocation) => sum + allocation.totalSeats, 0);
+    const seatsAvailable = seatAllocations.reduce((sum, allocation) => sum + allocation.availableSeats, 0);
+    
     onSubmit({
       ...formData,
       departureTime: new Date(formData.departureTime).toISOString(),
       arrivalTime: new Date(formData.arrivalTime).toISOString(),
+      totalSeats,
+      seatsAvailable,
+      seatAllocations,
     });
   };
 
   const handleChange = (field: string, value: string | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const updateSeatAllocation = (index: number, field: keyof SeatAllocation, value: any) => {
+    setSeatAllocations(prev => prev.map((allocation, i) => 
+      i === index ? { ...allocation, [field]: value } : allocation
+    ));
+  };
+
+  const getSeatClassLabel = (seatClass: SeatClass) => {
+    switch (seatClass) {
+      case 'first': return 'First Class';
+      case 'business': return 'Business Class';
+      case 'economy': return 'Economy Class';
+    }
   };
 
   return (
@@ -111,42 +142,66 @@ export const FlightForm = ({ flight, onSubmit, onCancel, isSubmitting }: FlightF
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <Label htmlFor="totalSeats">Total Seats</Label>
-              <Input
-                id="totalSeats"
-                type="number"
-                min="1"
-                value={formData.totalSeats}
-                onChange={(e) => handleChange('totalSeats', parseInt(e.target.value))}
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="seatsAvailable">Available Seats</Label>
-              <Input
-                id="seatsAvailable"
-                type="number"
-                min="0"
-                max={formData.totalSeats}
-                value={formData.seatsAvailable}
-                onChange={(e) => handleChange('seatsAvailable', parseInt(e.target.value))}
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="price">Price ($)</Label>
-              <Input
-                id="price"
-                type="number"
-                min="0"
-                step="0.01"
-                value={formData.price}
-                onChange={(e) => handleChange('price', parseFloat(e.target.value))}
-                required
-              />
-            </div>
+          <div>
+            <Label htmlFor="price">Base Price ($)</Label>
+            <Input
+              id="price"
+              type="number"
+              min="0"
+              step="0.01"
+              value={formData.price}
+              onChange={(e) => handleChange('price', parseFloat(e.target.value))}
+              required
+            />
+          </div>
+
+          {/* Seat Allocations */}
+          <div className="space-y-4">
+            <Label className="text-lg font-medium">Seat Class Configuration</Label>
+            {seatAllocations.map((allocation, index) => (
+              <Card key={allocation.class} className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-medium">{getSeatClassLabel(allocation.class)}</h4>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label htmlFor={`totalSeats-${allocation.class}`}>Total Seats</Label>
+                    <Input
+                      id={`totalSeats-${allocation.class}`}
+                      type="number"
+                      min="0"
+                      value={allocation.totalSeats}
+                      onChange={(e) => updateSeatAllocation(index, 'totalSeats', parseInt(e.target.value) || 0)}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor={`availableSeats-${allocation.class}`}>Available Seats</Label>
+                    <Input
+                      id={`availableSeats-${allocation.class}`}
+                      type="number"
+                      min="0"
+                      max={allocation.totalSeats}
+                      value={allocation.availableSeats}
+                      onChange={(e) => updateSeatAllocation(index, 'availableSeats', parseInt(e.target.value) || 0)}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor={`price-${allocation.class}`}>Price ($)</Label>
+                    <Input
+                      id={`price-${allocation.class}`}
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={allocation.price}
+                      onChange={(e) => updateSeatAllocation(index, 'price', parseFloat(e.target.value) || 0)}
+                      required
+                    />
+                  </div>
+                </div>
+              </Card>
+            ))}
           </div>
 
           <div>

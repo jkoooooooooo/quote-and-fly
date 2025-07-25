@@ -1,3 +1,12 @@
+export type SeatClass = 'economy' | 'business' | 'first';
+
+export interface SeatAllocation {
+  class: SeatClass;
+  totalSeats: number;
+  availableSeats: number;
+  price: number;
+}
+
 export interface Flight {
   id: string;
   flightNumber: string;
@@ -10,6 +19,7 @@ export interface Flight {
   price: number;
   airline: string;
   duration: string;
+  seatAllocations: SeatAllocation[];
 }
 
 export interface Booking {
@@ -19,6 +29,8 @@ export interface Booking {
   email: string;
   bookingDate: string;
   status: 'confirmed' | 'pending' | 'cancelled';
+  seatClass: SeatClass;
+  seatNumber?: string;
 }
 
 export interface AdminUser {
