@@ -10,6 +10,7 @@ import { motivationalQuotes } from '@/data/mockData';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCreateBooking } from '@/hooks/useBookings';
 import { toast } from 'sonner';
+import { getSeatClassById, calculateClassPrice } from '@/types/seatClass';
 import type { Database } from '@/integrations/supabase/types';
 
 type Flight = Database['public']['Tables']['flights']['Row'];
@@ -23,16 +24,23 @@ const BookFlight = () => {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [booking, setBooking] = useState<Booking | null>(null);
   const [quote, setQuote] = useState('');
+  const [selectedSeatClass, setSelectedSeatClass] = useState<string>('economy');
   const navigate = useNavigate();
   const { user } = useAuth();
   const createBookingMutation = useCreateBooking();
 
   useEffect(() => {
     const selectedFlight = sessionStorage.getItem('selectedFlight');
+    const selectedClass = sessionStorage.getItem('selectedSeatClass');
+    
     if (selectedFlight) {
       setFlight(JSON.parse(selectedFlight));
     } else {
       navigate('/');
+    }
+    
+    if (selectedClass) {
+      setSelectedSeatClass(selectedClass);
     }
   }, [navigate]);
 
@@ -125,8 +133,12 @@ const BookFlight = () => {
                       </div>
                     </div>
                     <div>
+                      <span className="text-muted-foreground">Seat Class:</span>
+                      <div className="font-medium">{getSeatClassById(selectedSeatClass)?.icon} {getSeatClassById(selectedSeatClass)?.name}</div>
+                    </div>
+                    <div>
                       <span className="text-muted-foreground">Total Price:</span>
-                      <div className="font-medium text-lg text-primary">${flight.price * passengers}</div>
+                      <div className="font-medium text-lg text-primary">${calculateClassPrice(flight.price, getSeatClassById(selectedSeatClass)?.priceMultiplier || 1) * passengers}</div>
                     </div>
                   </div>
                 </div>
@@ -212,10 +224,22 @@ const BookFlight = () => {
                   </div>
                 </div>
 
-                <div className="border-t pt-4">
+                <div className="border-t pt-4 space-y-3">
                   <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Base Price:</span>
+                    <span className="font-medium">${flight.price}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Seat Class:</span>
+                    <span className="font-medium flex items-center">
+                      {getSeatClassById(selectedSeatClass)?.icon} {getSeatClassById(selectedSeatClass)?.name || 'Economy Class'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center border-t pt-3">
                     <span className="text-lg font-medium">Total Price:</span>
-                    <span className="text-2xl font-bold text-primary">${flight.price}</span>
+                    <span className="text-2xl font-bold text-primary">
+                      ${calculateClassPrice(flight.price, getSeatClassById(selectedSeatClass)?.priceMultiplier || 1) * passengers}
+                    </span>
                   </div>
                 </div>
               </CardContent>
@@ -291,7 +315,7 @@ const BookFlight = () => {
                     className="w-full bg-gradient-primary hover:opacity-90 transition-opacity"
                     disabled={createBookingMutation.isPending || !passengerName || !email}
                   >
-                    {createBookingMutation.isPending ? 'Processing Booking...' : `Book Flight - $${flight.price * passengers}`}
+                    {createBookingMutation.isPending ? 'Processing Booking...' : `Book Flight - $${calculateClassPrice(flight.price, getSeatClassById(selectedSeatClass)?.priceMultiplier || 1) * passengers}`}
                   </Button>
                 </form>
               </CardContent>

@@ -25,9 +25,9 @@ const Header = () => {
           
           <nav className="hidden md:flex items-center space-x-6">
             <Link 
-              to="/" 
+              to="/search" 
               className={`text-primary-foreground hover:text-accent transition-colors ${
-                location.pathname === '/' ? 'text-accent font-medium' : ''
+                location.pathname === '/search' ? 'text-accent font-medium' : ''
               }`}
             >
               Search Flights

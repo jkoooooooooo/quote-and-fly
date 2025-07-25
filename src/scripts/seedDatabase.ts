@@ -7,7 +7,7 @@ const sampleFlights = [
     from_city: 'New York',
     to_city: 'Los Angeles',
     price: 299,
-    seats_available: 45,
+    seats_available: 156,
     total_seats: 180,
     duration: '5h 30m'
   },
@@ -100,6 +100,36 @@ const sampleFlights = [
     seats_available: 67,
     total_seats: 182,
     duration: '1h 40m'
+  },
+  {
+    flight_number: 'LH441',
+    airline: 'Lufthansa',
+    from_city: 'New York',
+    to_city: 'Frankfurt',
+    price: 850,
+    seats_available: 198,
+    total_seats: 250,
+    duration: '7h 45m'
+  },
+  {
+    flight_number: 'BA189',
+    airline: 'British Airways',
+    from_city: 'Los Angeles',
+    to_city: 'London',
+    price: 920,
+    seats_available: 156,
+    total_seats: 275,
+    duration: '10h 30m'
+  },
+  {
+    flight_number: 'QF12',
+    airline: 'Qantas',
+    from_city: 'Los Angeles',
+    to_city: 'Sydney',
+    price: 1200,
+    seats_available: 223,
+    total_seats: 280,
+    duration: '15h 20m'
   }
 ];
 

@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import LandingPage from "./pages/LandingPage";
+import SearchResults from "./pages/SearchResults";
 import SearchFlights from "./pages/SearchFlights";
 import BookFlight from "./pages/BookFlight";
 import MyBookings from "./pages/MyBookings";
@@ -24,7 +26,9 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/auth" element={<Auth />} />
-            <Route path="/" element={<SearchFlights />} />
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/search" element={<SearchResults />} />
+            <Route path="/flights" element={<SearchFlights />} />
             <Route path="/flight/:flightId" element={<FlightDetails />} />
             <Route 
               path="/book" 
