@@ -20,10 +20,11 @@ const SearchFlights = () => {
     // Simulate API call delay
     setTimeout(() => {
       // Filter flights based on search criteria
-      const results = mockFlights.filter(flight => 
-        flight.fromCity.toLowerCase().includes(params.fromCity.toLowerCase()) &&
-        flight.toCity.toLowerCase().includes(params.toCity.toLowerCase())
-      );
+    const results = mockFlights.filter(flight =>
+  flight.fromCity.toLowerCase() === params.fromCity.toLowerCase() &&
+  flight.toCity.toLowerCase() === params.toCity.toLowerCase()
+);
+
       
       setSearchResults(results);
       setIsLoading(false);
